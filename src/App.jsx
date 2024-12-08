@@ -1,34 +1,42 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
 import './App.css'
 
+import { Column } from './components/Column'
+import { useApp } from './providers/AppProvider'
+
 function App() {
-  const [count, setCount] = useState(0)
+  const {columns, db, setColumns } = useApp()
+  
+  async function addNewColumn() {
+    const columnName = prompt("Enter Column Name")
+
+    if (!columnName) { return }
+
+    const columnsStore = db.transaction('columns', 'readwrite').objectStore('columns')
+    const newColumn = {
+      name: columnName,
+      tasks: []
+    }
+
+    await columnsStore.add(newColumn)
+
+    const columns = await columnsStore.getAll()
+    setColumns(columns)
+  }
 
   return (
-    <>
+    <main className="h-screen px-8">
       <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+        <button onClick={addNewColumn} className="bg-sky-600 rounded p-2 text-white">New Column</button>
       </div>
-      <h1>Hello My Task Creator App</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
+      <div className="my-4">
+        <ol className="flex list-none gap-4 overflow-x-auto">
+          {columns.map((column) => (
+            <Column key={column.id} column={column} />
+          ))}
+        </ol>
       </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    </main>
+
   )
 }
 
