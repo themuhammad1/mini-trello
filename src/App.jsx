@@ -24,7 +24,7 @@ function App() {
   }
 
   return (
-    <main className="h-screen px-8">
+    <main className="h-screen p-8 bg-gray-50">
       <div>
         <button onClick={addNewColumn} className="bg-sky-600 rounded p-2 text-white">New Column</button>
       </div>

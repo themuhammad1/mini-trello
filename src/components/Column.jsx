@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useDrop } from 'react-dnd'
 import { InlineEdit } from './InlineEdit'
 import { NewCardInput } from './NewCardInput'
 import { TaskCard } from './TaskCard'
@@ -8,9 +9,47 @@ import { useApp } from '../providers/AppProvider'
 
 export function Column({ column }) {
   const {db, setColumns} = useApp()
+  
+  const [collectedProps, drop] = useDrop(() => ({
+    accept: 'CARD',
+    drop: async (item) => {
+      const sourceColumnId = item.columnId
+      const destinationColumnId = column.id
+      
+      const columnStore = db.transaction('columns', "readwrite").objectStore('columns')
+      const sourceColumn = await columnStore.get(sourceColumnId)
+      const destinationColumn = await columnStore.get(destinationColumnId)
+      
+      sourceColumn.tasks = sourceColumn.tasks.filter(task => task.id !== item.task.id)
+      
+      await columnStore.put(sourceColumn)
+      
+      destinationColumn.tasks.unshift(item.task)
+      
+      await columnStore.put(destinationColumn)
+      
+      const columns = await columnStore.getAll()
+      
+      setColumns(columns)
+    },
+    canDrop: (item) => {
+      const sourceColumnId = item.columnId
+      const destinationColumnId = column.id
+      
+      if (sourceColumnId === destinationColumnId) { return false }
+      
+      return true
+    },
+    collect: (monitor) => ({
+      isActive: monitor.canDrop() && monitor.isOver()
+    })
+    
+  }))
   const [isAddingNewTask, setIsAddingNewTask] = useState(false)
   const [open, setOpen] = useState(false)
   const [taskBeingEdited, setTaskBeingEdited] = useState(null)
+  
+  const isDropping = collectedProps.isActive
 
   async function handleDelete() {
     const choice = confirm(`Are you sure, you want to delete column "${column.name}"?`)
@@ -67,7 +106,7 @@ export function Column({ column }) {
   }
 
   return (
-    <li className="flex-none self-start w-80 rounded-lg bg-gray-200 p-4">
+    <li ref={drop} className="flex-none self-start w-80 rounded-lg bg-gray-200 p-4 shadow-sm">
       <Modal task={taskBeingEdited} columnId={column.id} isOpen={open} onClose={hideModal} />
       <div className="flex justify-between">
 
@@ -77,9 +116,10 @@ export function Column({ column }) {
         </div>
       </div>
 
-      <ol className="space-y-4 overflow-y-auto max-h-[calc(100vh-192px)]">
+      <ol className="space-y-4 overflow-y-auto max-h-[calc(100vh-225px)]">
+        {isDropping && <DropPreview />}
         {column.tasks.map((task) => (
-          <TaskCard key={task.id} task={task} onClick={() => showModal(task)} />
+          <TaskCard key={task.id} task={task} columnId={column.id} onClick={() => showModal(task)} />
         ))}
         {isAddingNewTask && (
           <li>
@@ -91,6 +131,13 @@ export function Column({ column }) {
       
       {!isAddingNewTask && <Button text="Add a card" onClick={() => setIsAddingNewTask(true)} /> }
 
+    </li>
+  )
+}
+
+function DropPreview() {
+  return (
+    <li className="bg-gray-300 rounded-lg shadow min-h-14">
     </li>
   )
 }

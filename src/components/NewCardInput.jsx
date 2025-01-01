@@ -11,7 +11,6 @@ export function NewCardInput({ onCancel, onSave }) {
     
     setTimeout(() => {
       lastEl.current.scrollIntoView({behaviour: "smooth"})
-            
     }, 5)
   }
 
